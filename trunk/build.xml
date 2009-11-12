@@ -1,0 +1,129 @@
+<?xml version="1.0" ?>
+
+<project name="pcap-reconst" default="dist">
+    <property name="dir.src" location="src"/>
+    <property name="dir.src.java" location="${dir.src}/java"/>
+    <property name="dir.lib" location="lib"/>
+    <property name="dir.build" location="build"/>
+    <property name="dir.dist" location="dist"/>
+    <property name="dir.classes" location="classes"/>
+    <property name="dir.tests" location="test"/>
+    <property name="dir.testreports" location="${dir.build}/testreports"/>
+    <property name="dir.examples" location="examples"/>
+    <property name="dir.dll" location="dll"/>
+    <property name="version.num" value="1.00" />
+
+    <fileset id="lib" dir="${dir.lib}">
+        <include name="xmlpull_1_1_3_1.jar-1.1.3.jar" />                 
+        <include name="commons-codec-1.3.jar" />               
+        <include name="junit-4.4.jar" />
+        <include name="commons-lang-2.3.jar" />   
+        <include name="commons-httpclient-3.0.1.jar" />   
+        <include name="jpcap.jar" />
+        <include name="jpcap-sf-0.01.16.jar" />
+        <include name="jnetpcap-1.3.b0006.jar" />
+        <include name="log4j-1.2.15.jar" />             
+    </fileset>
+    
+    <target name="clean">
+        <delete dir="${dir.classes}"/>
+        <delete dir="${dir.build}"/>
+        <delete dir="${dir.dist}"/>
+    </target>
+
+    <target name="init"
+            description="initialize the project tree with required directories, etc.">
+        <mkdir dir="${dir.build}"/>
+        <mkdir dir="${dir.dist}"/>
+        <mkdir dir="${dir.classes}"/>
+    </target>
+    
+    <!-- compile -->
+    <path id="build.classpath">
+        <fileset refid="lib"/>
+    </path>
+
+    <path id="run.classpath">
+        <path refid="build.classpath"/>
+        <pathelement location="${dir.classes}"/>
+    </path>
+
+    <target name="compile" depends="init">
+        <javac srcdir="${dir.src}/java" destdir="${dir.classes}" target="1.5" debug="true"
+               debuglevel="lines,vars,source">
+            <classpath refid="build.classpath"/>
+        </javac>
+
+    </target>
+
+    <target name="init-test">
+        <mkdir dir="${dir.testreports}"/>
+    </target>
+
+    <target name="compile-test" depends="compile">
+        <javac srcdir="${dir.tests}/java" destdir="${dir.classes}" target="1.5" debug="true"
+               debuglevel="lines,vars,source" includes="**/*.java">
+            <classpath>
+                <path refid="run.classpath"/>
+                <pathelement location="${dir.classes}"/>
+            </classpath>
+        </javac>
+        <javac srcdir="${dir.examples}/java" destdir="${dir.classes}" target="1.5" debug="true"
+               debuglevel="lines,vars,source" includes="**/*.java">
+            <classpath>
+                <path refid="run.classpath"/>
+                <pathelement location="${dir.classes}"/>
+            </classpath>
+        </javac>
+    </target>
+
+    <target name="test" depends="init-test,compile-test">
+        <junit printsummary="on" fork="yes" forkmode="once"
+               haltonfailure="no" haltonerror="no"
+               failureproperty="junit_test_failed"
+               showoutput="yes" dir="${basedir}">
+            <formatter type="xml"/>
+
+            <!-- run all classes starting with the prefix Test -->
+            <batchtest todir="${dir.testreports}">
+                <fileset dir="${dir.classes}">
+                    <include name="**/*Test.class"/>
+                </fileset>
+            </batchtest>
+
+            <classpath>
+                <path refid="run.classpath"/>
+            </classpath>
+        </junit>
+        <fail if="junit_test_failed" message="One or more tests failed"/>
+    </target>
+
+    <target name="jar"
+            description="create a jar file for project distribution"
+            depends="compile">
+        <copy todir="${dir.classes}" overwrite="true">
+            <fileset dir="${dir.src.java}" includes="**/*.xml,**/*.txt"/>
+        </copy> 
+
+        <jar basedir="${dir.classes}"
+             destfile="${dir.dist}/${ant.project.name}-${version.num}.jar"
+             includes="**/*.class,**/*.xml,**/*.txt,**/*.properties">
+        </jar>
+    </target>
+
+    <target name="zip" depends="jar">
+        <zip destfile="${dir.dist}/${ant.project.name}-${version.num}.zip">
+            <fileset dir="${dir.dist}" includes="*.jar" />
+            <zipfileset dir="${dir.examples}" includes="**/*" prefix="examples"/>
+            <zipfileset refid="lib" prefix="lib" />
+            <zipfileset dir="${dir.dll}" includes="**/*" prefix="dll" />
+            <zipfileset dir="." includes="*.bat" />
+        </zip>
+    </target>
+
+    <target name="dist"
+            depends="clean, test, zip"
+            description="compiles, runs test, builds a distributable zip and places in the dist directory"
+            />
+
+</project>
